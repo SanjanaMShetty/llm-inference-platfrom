@@ -1,0 +1,13 @@
+# Rejected: Restricted data requires a GPU-capable backend.
+apiVersion: inference.llmplatform.dev/v1alpha1
+kind: InferenceService
+metadata:
+  name: bad-restricted-on-fake
+  namespace: default
+spec:
+  model: fake-llm
+  backend: fake
+  image: fakebackend:dev
+  classification: Restricted
+  accelerator:
+    deviceClassName: gpu.example.com

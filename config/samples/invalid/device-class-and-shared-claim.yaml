@@ -1,0 +1,13 @@
+# Rejected: deviceClassName and sharedClaimName are mutually exclusive.
+apiVersion: inference.llmplatform.dev/v1alpha1
+kind: InferenceService
+metadata:
+  name: bad-device-and-shared
+  namespace: default
+spec:
+  model: facebook/opt-125m
+  backend: vLLM
+  image: vllm/vllm-openai:replace-with-a-pinned-tag
+  accelerator:
+    deviceClassName: gpu.example.com
+    sharedClaimName: shared-gpu

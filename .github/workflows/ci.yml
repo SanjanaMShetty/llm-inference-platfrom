@@ -29,8 +29,20 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - run: go vet ./...
-      - run: go test -race -count=1 ./...
+      - run: make vet
+      # Runs unit tests and the envtest integration tests (downloads the envtest
+      # binaries on first use).
+      - run: make test
+
+  generated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: generated files are up to date
+        run: make verify-generated
 
   build:
     runs-on: ubuntu-latest
@@ -41,3 +53,4 @@ jobs:
           go-version-file: go.mod
       - run: go build ./...
       - run: docker build -t fakebackend:ci .
+      - run: docker build -f Dockerfile.operator -t llm-platform-operator:ci .

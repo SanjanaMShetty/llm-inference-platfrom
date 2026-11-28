@@ -1,0 +1,16 @@
+# Valid for the API server, but the operator does not create a device claim until
+# the DRA milestone; it reports AcceleratorApplied=False. There is no GPU in the
+# kind cluster, so this is for inspecting validation and status, not for running.
+apiVersion: inference.llmplatform.dev/v1alpha1
+kind: InferenceService
+metadata:
+  name: demo-vllm-restricted
+  namespace: default
+spec:
+  model: facebook/opt-125m
+  backend: vLLM
+  image: vllm/vllm-openai:replace-with-a-pinned-tag
+  classification: Restricted
+  accelerator:
+    deviceClassName: gpu.example.com
+  weightLoadTimeSeconds: 600

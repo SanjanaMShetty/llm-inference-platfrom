@@ -1,0 +1,11 @@
+# Rejected: Restricted data requires accelerator.deviceClassName.
+apiVersion: inference.llmplatform.dev/v1alpha1
+kind: InferenceService
+metadata:
+  name: bad-restricted-no-device
+  namespace: default
+spec:
+  model: facebook/opt-125m
+  backend: vLLM
+  image: vllm/vllm-openai:replace-with-a-pinned-tag
+  classification: Restricted

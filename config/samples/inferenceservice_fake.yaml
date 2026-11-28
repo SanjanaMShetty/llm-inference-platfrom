@@ -1,0 +1,17 @@
+apiVersion: inference.llmplatform.dev/v1alpha1
+kind: InferenceService
+metadata:
+  name: demo-fake
+  namespace: default
+spec:
+  model: fake-llm
+  backend: fake
+  image: fakebackend:dev
+  classification: Internal
+  weightLoadTimeSeconds: 30
+  autoscaling:
+    minReplicas: 1
+    maxReplicas: 3
+  extraArgs:
+    - -first-token-delay=300ms
+  costPerHour: "0.10"

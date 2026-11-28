@@ -1,0 +1,10 @@
+# Rejected: the name also names the Service, so it must be a DNS label (no dots).
+apiVersion: inference.llmplatform.dev/v1alpha1
+kind: InferenceService
+metadata:
+  name: bad.name.with.dots
+  namespace: default
+spec:
+  model: fake-llm
+  backend: fake
+  image: fakebackend:dev

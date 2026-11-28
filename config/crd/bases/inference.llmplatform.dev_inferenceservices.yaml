@@ -1,0 +1,298 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.22.0
+  name: inferenceservices.inference.llmplatform.dev
+spec:
+  group: inference.llmplatform.dev
+  names:
+    kind: InferenceService
+    listKind: InferenceServiceList
+    plural: inferenceservices
+    shortNames:
+    - llmsvc
+    singular: inferenceservice
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.readyReplicas
+      name: Ready
+      type: integer
+    - jsonPath: .spec.backend
+      name: Backend
+      type: string
+    - jsonPath: .spec.model
+      name: Model
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: InferenceService declares one served model and the machinery
+          around it.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: InferenceServiceSpec is the desired state of a served model.
+            properties:
+              accelerator:
+                description: |-
+                  Accelerator describes the GPU request. It is validated now and acted on by
+                  the DRA milestone; until then the operator reports AcceleratorApplied=False.
+                properties:
+                  deviceClassName:
+                    description: DeviceClassName requests devices of this class through
+                      a per-service claim.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  sharedClaimName:
+                    description: SharedClaimName references a pre-created claim shared
+                      between services.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                type: object
+                x-kubernetes-validations:
+                - message: deviceClassName and sharedClaimName are mutually exclusive
+                  rule: '!(has(self.deviceClassName) && has(self.sharedClaimName))'
+              autoscaling:
+                default:
+                  maxReplicas: 1
+                  minReplicas: 1
+                description: |-
+                  Autoscaling bounds the replica count. The operator uses minReplicas as the
+                  initial replica count only; afterwards an autoscaler owns spec.replicas.
+                properties:
+                  maxReplicas:
+                    default: 1
+                    description: MaxReplicas is the upper bound.
+                    format: int32
+                    minimum: 1
+                    type: integer
+                  minReplicas:
+                    default: 1
+                    description: MinReplicas is the lower bound, and the initial replica
+                      count.
+                    format: int32
+                    minimum: 1
+                    type: integer
+                type: object
+                x-kubernetes-validations:
+                - message: maxReplicas must be greater than or equal to minReplicas
+                  rule: self.maxReplicas >= self.minReplicas
+              backend:
+                description: Backend selects the model server implementation.
+                enum:
+                - vLLM
+                - Ollama
+                - fake
+                type: string
+              classification:
+                default: Internal
+                description: Classification is the highest data sensitivity this service
+                  may handle.
+                enum:
+                - Public
+                - Internal
+                - Restricted
+                type: string
+              costPerHour:
+                anyOf:
+                - type: integer
+                - type: string
+                description: |-
+                  CostPerHour is the cost of one replica per hour (for example "2.50"). It is
+                  stored for the gateway's cost ledger and not used by the operator.
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
+              extraArgs:
+                description: ExtraArgs are appended to the model server's arguments.
+                items:
+                  type: string
+                maxItems: 32
+                type: array
+              image:
+                description: |-
+                  Image is the container image of the model server. It is required and has no
+                  default so that no image tag is ever chosen on your behalf.
+                maxLength: 512
+                minLength: 1
+                type: string
+              model:
+                description: |-
+                  Model identifies the model to serve: a Hugging Face repo id for vLLM,
+                  a model tag for Ollama, or any label for the fake backend.
+                maxLength: 256
+                minLength: 1
+                type: string
+              resources:
+                description: Resources are CPU and memory hints for the model server
+                  container.
+                properties:
+                  cpu:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: CPU is the CPU request.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  memory:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: Memory is the memory request; it is also used as
+                      the memory limit.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                type: object
+              weightLoadTimeSeconds:
+                default: 300
+                description: |-
+                  WeightLoadTimeSeconds is how long the model server may take to load weights
+                  before it can pass its health check. It sizes the startup probe.
+                format: int32
+                maximum: 3600
+                minimum: 1
+                type: integer
+            required:
+            - backend
+            - image
+            - model
+            type: object
+            x-kubernetes-validations:
+            - message: Restricted data requires a GPU-capable backend (vLLM); Ollama
+                and fake are CPU-only
+              rule: self.classification != 'Restricted' || self.backend == 'vLLM'
+            - message: Restricted data requires accelerator.deviceClassName
+              rule: self.classification != 'Restricted' || (has(self.accelerator)
+                && has(self.accelerator.deviceClassName))
+          status:
+            description: InferenceServiceStatus reports what the cluster is actually
+              doing.
+            properties:
+              conditions:
+                description: |-
+                  Conditions carry the detail behind the phase, including the scheduler's or
+                  kubelet's reason when something is wrong.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              endpoint:
+                description: Endpoint is the in-cluster base URL of the OpenAI-compatible
+                  API.
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the spec generation the operator
+                  last applied.
+                format: int64
+                type: integer
+              phase:
+                description: Phase summarizes the observed state.
+                enum:
+                - Pending
+                - Loading
+                - Ready
+                - Degraded
+                - Failing
+                - Unschedulable
+                type: string
+              readyReplicas:
+                description: ReadyReplicas is the number of replicas passing their
+                  readiness probe.
+                format: int32
+                type: integer
+              replicas:
+                description: Replicas is the replica count currently set on the Deployment.
+                format: int32
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+        x-kubernetes-validations:
+        - message: metadata.name must be a DNS label (lowercase letters, digits and
+            '-', at most 63 characters) because it also names the Service
+          rule: size(self.metadata.name) <= 63 && self.metadata.name.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')
+    served: true
+    storage: true
+    subresources:
+      status: {}

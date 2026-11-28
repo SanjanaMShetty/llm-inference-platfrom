@@ -1,0 +1,12 @@
+ARG GO_VERSION=1.26
+FROM golang:${GO_VERSION} AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/operator ./cmd/operator
+
+FROM gcr.io/distroless/static:nonroot
+COPY --from=build /out/operator /operator
+USER 65532:65532
+ENTRYPOINT ["/operator"]

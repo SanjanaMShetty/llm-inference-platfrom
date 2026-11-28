@@ -1,0 +1,13 @@
+# Rejected: maxReplicas must be greater than or equal to minReplicas.
+apiVersion: inference.llmplatform.dev/v1alpha1
+kind: InferenceService
+metadata:
+  name: bad-max-below-min
+  namespace: default
+spec:
+  model: fake-llm
+  backend: fake
+  image: fakebackend:dev
+  autoscaling:
+    minReplicas: 3
+    maxReplicas: 2

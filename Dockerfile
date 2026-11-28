@@ -1,7 +1,8 @@
-FROM golang:1.23 AS build
+# Fake backend image. The fake backend uses only the Go standard library, so no
+# module download step is needed. Keep GO_VERSION in step with go.mod.
+ARG GO_VERSION=1.26
+FROM golang:${GO_VERSION} AS build
 WORKDIR /src
-COPY go.mod go.sum* ./
-RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/fakebackend ./cmd/fakebackend
 
